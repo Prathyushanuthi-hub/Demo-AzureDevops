@@ -1,0 +1,35 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  - group: GitHub-Config
+
+steps:
+- task: PowerShell@2
+  inputs:
+    filePath: '$(System.DefaultWorkingDirectory)/Get-GitHubDetails.ps1'
+    arguments: '-OrganizationName "$(GITHUB_ORG)" -PersonalAccessToken "$(GITHUB_PAT)"'
+  displayName: 'Fetch GitHub Organization Details'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/github-details'
+    ArtifactName: 'GitHubDetails'
+    publishLocation: 'Container'
+  displayName: 'Publish GitHub Details'
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $summary = Get-Content "$(System.DefaultWorkingDirectory)/github-details/summary.json" | ConvertFrom-Json
+      Write-Host "##[section]GitHub Organization Summary"
+      Write-Host "Repository Count: $($summary.RepositoryCount)"
+      Write-Host "Total Repository Size: $($summary.TotalRepoSize) KB"
+      Write-Host "Team Count: $($summary.TeamCount)"
+      Write-Host "Member Count: $($summary.MemberCount)"
+      Write-Host "Generated At: $($summary.GeneratedAt)"
+  displayName: 'Display Summary'
